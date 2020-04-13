@@ -97,6 +97,9 @@ class SwellRewardsStream:
         response = self._get(url_suffix=url_suffix, params=params)
         return SwellRewardsResponse(self, url_suffix, params, response)
 
+    def _list_simple_resource(self, url_suffix: str, params: Dict = None):
+        response = self._get(url_suffix=url_suffix, params=params)
+        return response
 
 class SwellRewardsResponse:
     def __init__(self, client, url_suffix, params, response):
@@ -129,7 +132,6 @@ class SwellRewardsResponse:
     def get(self, key, default=None):
         return self.response.get(key, default)
 
-
 class CustomersStream(SwellRewardsStream):
     tap_stream_id = 'customers'
     stream = 'customers'
@@ -158,10 +160,93 @@ class CustomersStream(SwellRewardsStream):
                   singer.write_record(stream_name=self.stream, time_extracted=singer.utils.now(), record=transformed_record)
                   counter.increment()
                   if transformed_record["last_seen_at"] > most_recent_date:
-                    most_recent_date = transformed_record["last_seen_at"]
+                    most_recent_datme = transformed_record["last_seen_at"]
 
         singer.bookmarks.write_bookmark(state=self.state, tap_stream_id=self.tap_stream_id, key="last_seen_at", val=most_recent_date)
 
+class CustomersDetailStream(SwellRewardsStream):
+    tap_stream_id = 'customers'
+    stream = 'customers'
+    key_properties = ['email']
+    valid_replication_keys = ['last_seen_at']
+    valid_params = [
+        'page',
+        'per_page',
+        'last_seen_at'
+    ]
+    required_params = ['last_seen_at']
+
+    def __init__(self, config, state, **kwargs):
+        super().__init__(config, state)
+
+    def sync(self):
+
+        most_recent_date = self.params["last_seen_at"]
+        record_metadata = singer.metadata.to_map(self.metadata)
+
+        with singer.metrics.job_timer(job_type=f"list_{self.tap_stream_id}"), \
+          singer.metrics.record_counter(endpoint=self.tap_stream_id) as counter, \
+          singer.Transformer() as transformer:
+            for page in self._list_resource(url_suffix="/customers/all", params=self.params):
+                for record in page.get(self.stream):
+                    history=self._list_resource(url_suffix="/customers", params={'customer_email':record['email'],'with_history':'true'}).response
+                    transformed_record = transformer.transform(data=history, schema=self.schema, metadata=record_metadata)
+                    singer.write_record(stream_name=self.stream, time_extracted=singer.utils.now(), record=transformed_record)
+                    counter.increment()
+                    if transformed_record["last_seen_at"] > most_recent_date:
+                        most_recent_datme = transformed_record["last_seen_at"]
+           
+        singer.bookmarks.write_bookmark(state=self.state, tap_stream_id=self.tap_stream_id, key="last_seen_at", val=most_recent_date)
+
+class ViptiersStream(SwellRewardsStream):
+    tap_stream_id = 'vip_tiers'
+    stream = 'vip_tiers'
+    key_properties = ['id']
+    valid_replication_keys = []
+    valid_params = [
+        'page',
+        'per_page'
+    ]
+    required_params = []
+
+    def __init__(self, config, state, **kwargs):
+        super().__init__(config, state)
+
+    def sync(self):
+      
+        record_metadata = singer.metadata.to_map(self.metadata)
+
+        with singer.metrics.job_timer(job_type=f"list_{self.tap_stream_id}"), \
+          singer.metrics.record_counter(endpoint=self.tap_stream_id) as counter, \
+          singer.Transformer() as transformer:
+            for page in self._list_simple_resource(url_suffix="/vip_tiers", params=self.params):
+                for record in page.get(self.tap_stream_id):
+                  transformed_record = transformer.transform(data=record, schema=self.schema, metadata=record_metadata)
+                  singer.write_record(stream_name=self.stream, time_extracted=singer.utils.now(), record=transformed_record)
+                  counter.increment()
+
+class CampaignsStream(SwellRewardsStream):
+    tap_stream_id = 'campaigns'
+    stream = 'campaigns'
+    key_properties = ['id']
+    valid_replication_keys = []
+    valid_params = []
+    required_params = []
+
+    def __init__(self, config, state, **kwargs):
+        super().__init__(config, state)
+
+    def sync(self):
+        record_metadata = singer.metadata.to_map(self.metadata)
+        with singer.metrics.job_timer(job_type=f"list_{self.tap_stream_id}"), \
+          singer.metrics.record_counter(endpoint=self.tap_stream_id) as counter, \
+          singer.Transformer() as transformer:
+            for record in self._list_simple_resource(url_suffix="/campaigns", params=self.params):
+                transformed_record = transformer.transform(data=record, schema=self.schema, metadata=record_metadata)
+                singer.write_record(stream_name=self.stream, time_extracted=singer.utils.now(), record=transformed_record)
+                counter.increment()
+                  
 AVAILABLE_STREAMS = {
-    CustomersStream
+    CustomersDetailStream
+
 }

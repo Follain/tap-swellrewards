@@ -17,8 +17,9 @@ def discover(config, state={}):
 
 
 def sync(config, catalog, state={}):
-    LOGGER.info('Starting sync..')
-    selected_streams = {catalog_entry.stream for catalog_entry in catalog.get_selected_streams(state)}
+    LOGGER.info('Starting sync..')    
+    #selected_streams = {catalog_entry.stream for catalog_entry in catalog.get_selected}
+    selected_streams = {catalog_entry.stream for catalog_entry in catalog.streams}
 
     streams_to_sync = set()
     for available_stream in AVAILABLE_STREAMS:
