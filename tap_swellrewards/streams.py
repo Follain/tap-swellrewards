@@ -6,6 +6,7 @@ from typing import Dict
 
 import requests
 import singer
+#import pdb
 
 LOGGER = singer.get_logger()
 
@@ -193,8 +194,8 @@ class CustomersDetailStream(SwellRewardsStream):
                     transformed_record = transformer.transform(data=history, schema=self.schema, metadata=record_metadata)
                     singer.write_record(stream_name=self.stream, time_extracted=singer.utils.now(), record=transformed_record)
                     counter.increment()
-                    if transformed_record["last_seen_at"] > most_recent_date:
-                        most_recent_datme = transformed_record["last_seen_at"]
+                    if record["last_seen_at"] > most_recent_date:
+                        most_recent_datme = record["last_seen_at"]
            
         singer.bookmarks.write_bookmark(state=self.state, tap_stream_id=self.tap_stream_id, key="last_seen_at", val=most_recent_date)
 
