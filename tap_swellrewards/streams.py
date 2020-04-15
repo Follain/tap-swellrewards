@@ -6,7 +6,7 @@ from typing import Dict
 
 import requests
 import singer
-#import pdb
+import pdb
 
 LOGGER = singer.get_logger()
 
@@ -195,7 +195,7 @@ class CustomersDetailStream(SwellRewardsStream):
                     singer.write_record(stream_name=self.stream, time_extracted=singer.utils.now(), record=transformed_record)
                     counter.increment()
                     if record["last_seen_at"] > most_recent_date:
-                        most_recent_datme = record["last_seen_at"]
+                        most_recent_date = record["last_seen_at"]
            
         singer.bookmarks.write_bookmark(state=self.state, tap_stream_id=self.tap_stream_id, key="last_seen_at", val=most_recent_date)
 
